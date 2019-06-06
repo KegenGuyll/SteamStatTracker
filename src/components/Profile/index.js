@@ -11,9 +11,13 @@ import {
   Nav,
   Media,
   Badge,
-  Spinner
+  Spinner,
+  Form
 } from 'react-bootstrap';
 import axios from 'axios';
+import './style.css';
+import Select from 'react-select';
+import { withRouter } from 'react-router-dom';
 
 class Profile extends Component {
   constructor(props) {
@@ -24,12 +28,57 @@ class Profile extends Component {
       friends: null,
       friendsData: null,
       userGames: null,
-      steamids: []
+      steamids: [],
+      compareProfiles: [],
+      value: ''
     };
   }
 
+  componentDidMount = () => {
+    const {
+      match: { params }
+    } = this.props;
+    if (params.steamid) {
+      this.setState(
+        { steamid: params.steamid },
+        this.userInformation(params.steamid)
+      );
+    }
+  };
+
+  handleCompare = async () => {
+    let profileCompare = [];
+    await this.state.value.map(profile => {
+      profileCompare.push(profile.value);
+    });
+    await profileCompare.push(this.state.steamid);
+    this.props.history.push(`/compare/${profileCompare.toString()}`);
+  };
+
+  handelSelect = (value, { action, removedValue }) => {
+    switch (action) {
+      case 'remove-value':
+      case 'clear':
+        this.setState({ value: '' });
+    }
+    this.setState({ value: value });
+  };
+
   handleSteamid = e => {
     this.setState({ steamid: e.target.value });
+  };
+
+  timeSort = (a, b) => {
+    const TimeA = a.playtime_forever;
+    const TimeB = b.playtime_forever;
+
+    let comparison = 0;
+    if (TimeA > TimeB) {
+      comparison = -1;
+    } else if (TimeA < TimeB) {
+      comparison = 1;
+    }
+    return comparison;
   };
 
   userGames = () => {
@@ -51,7 +100,9 @@ class Profile extends Component {
           }
         })
         .then(response => {
-          this.setState({ userGames: response.data });
+          this.setState({
+            userGames: response.data.response.games.sort(this.timeSort)
+          });
         })
         .catch(e => {
           console.log(e);
@@ -79,7 +130,7 @@ class Profile extends Component {
         })
         .then(() => {
           this.state.friends.friendslist.friends.map(user => {
-            this.state.steamids.push(user.steamid);
+            return this.state.steamids.push(user.steamid);
           });
         })
         .then(() => {
@@ -106,6 +157,12 @@ class Profile extends Component {
       .then(response => {
         if (response.data.response.players.length > 1) {
           this.setState({ userFriends: response.data.response });
+          response.data.response.players.map(user => {
+            this.state.compareProfiles.push({
+              value: user.steamid,
+              label: user.personaname
+            });
+          });
         } else {
           this.setState({ userData: response.data.response }, this.userGames());
         }
@@ -136,7 +193,7 @@ class Profile extends Component {
         <br />
         {this.state.userData && (
           <Container>
-            <Row>
+            <Row className='justify-content-md-center'>
               <Col lg={3} sm={3} md={3}>
                 {this.state.userData.players.map(user => {
                   const date = new Date(user.lastlogoff * 1000);
@@ -157,7 +214,7 @@ class Profile extends Component {
               </Col>
               <Col>
                 <Tab.Container defaultActiveKey='first'>
-                  <Row>
+                  <Row className='justify-content-md-center'>
                     <Col lg={3} sm={3} md={3}>
                       <Nav variant='pills'>
                         <Nav.Item>
@@ -168,12 +225,10 @@ class Profile extends Component {
                                 style={{ marginLeft: '1vw' }}
                                 variant='light'
                               >
-                                {this.state.userGames.response.games.length}
+                                {this.state.userGames.length}
                               </Badge>
                             </Nav.Link>
-                          ) : (
-                            <Nav.Link eventKey='first'>Games</Nav.Link>
-                          )}
+                          ) : null}
                         </Nav.Item>
                         <Nav.Item onClick={this.userFriends}>
                           {this.state.userFriends ? (
@@ -201,7 +256,7 @@ class Profile extends Component {
                       <Tab.Content>
                         <Tab.Pane eventKey='first'>
                           {this.state.userGames ? (
-                            this.state.userGames.response.games.map(game => {
+                            this.state.userGames.map(game => {
                               return (
                                 <Media
                                   style={{
@@ -239,6 +294,30 @@ class Profile extends Component {
                           )}
                         </Tab.Pane>
                         <Tab.Pane eventKey='second'>
+                          <Row
+                            className='justify-content-md-center'
+                            style={{ paddingTop: '1vh' }}
+                          >
+                            <Col lg={9} sm={9} md={9}>
+                              <Select
+                                onChange={this.handelSelect}
+                                isMulti
+                                options={this.state.compareProfiles}
+                                name='compare'
+                              />
+                            </Col>
+                            <Col lg={3} sm={3} md={3}>
+                              <Button
+                                onClick={this.handleCompare}
+                                variant='primary'
+                                disabled={
+                                  this.state.value === '' ? true : false
+                                }
+                              >
+                                Compare
+                              </Button>
+                            </Col>
+                          </Row>
                           {this.state.userFriends ? (
                             this.state.userFriends.players.map(friend => {
                               return (
@@ -250,6 +329,7 @@ class Profile extends Component {
                                   key={friend.steamid}
                                 >
                                   <img
+                                    style={{ marginLeft: '1vw' }}
                                     width={64}
                                     height={64}
                                     alt='Avatar'
@@ -259,6 +339,7 @@ class Profile extends Component {
                                     <h5 style={{ paddingLeft: '1vw' }}>
                                       {friend.personaname}
                                     </h5>
+
                                     <small style={{ paddingLeft: '1vw' }}>
                                       {friend.realname}
                                     </small>
@@ -267,9 +348,9 @@ class Profile extends Component {
                               );
                             })
                           ) : (
-                            <Col>
+                            <Row className='justify-content-md-center'>
                               <Spinner animation='border' variant='primary' />
-                            </Col>
+                            </Row>
                           )}
                         </Tab.Pane>
                       </Tab.Content>
@@ -285,4 +366,4 @@ class Profile extends Component {
   }
 }
 
-export default Profile;
+export default withRouter(Profile);

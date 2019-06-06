@@ -1,15 +1,21 @@
 import React from 'react';
 import { Navbar, Nav } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
 
 const Navigation = props => {
   return (
     <div>
       <Navbar bg='light' variant='light'>
-        <Navbar.Brand>Steam Stats</Navbar.Brand>
+        <Navbar.Brand as={Link} to='/'>
+          Steam Stats
+        </Navbar.Brand>
         <Nav>
-          <Nav.Link>Games</Nav.Link>
-          <Nav.Link>Friends</Nav.Link>
-          <Nav.Link>Something</Nav.Link>
+          <Nav.Link as={Link} to='/profile'>
+            Profile
+          </Nav.Link>
+          <Nav.Link as={Link} to='/compare'>
+            Compare Profiles
+          </Nav.Link>
         </Nav>
       </Navbar>
       {props.children}
